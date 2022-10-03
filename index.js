@@ -26,13 +26,34 @@ connection.query("show databases like 'Meltibot';", function (err, result) {
 		});
 	}
 });
+connection.query("show tables like 'Params';", function (err, result) {
+	if(err) {
+		console.log(err.message);
+		return;
+	}
+	console.log(result);
+	if(!(result.length)) {
+		connection.query("CREATE TABLE Params\n(\nname varchar(255),\nvalue varchar(255)\n);", function (err, result) {
+			if(err) {
+				console.log(err.message);
+				return;
+			}
+			console.log("table created");
+		});
+	}
+});
 //connection.end();
 ws.onmessage = function (event) {
     const str = JSON.parse(event.data);
 	
-//	console.log('str is:');
+	if(str.post_type == "meta_event") {
+		return;
+	}
+//	console.log(str.message_type);
 //	console.log(str);
-	if (str.message_type === "private") {
+	if(str.echo && str.echo[0] == "picture") {
+		picture.main(ws, str);
+	} else if(str.message_type === "private") {
 		console.log('private');
 		console.log(str.message);
 		const ret = {
@@ -74,6 +95,7 @@ ws.onmessage = function (event) {
 		echo.main(ws, str);
 		picture.main(ws, str);
 	} else {
+//		console.log(str);
 //		console.log('unknown message');
 		return;
 	}
