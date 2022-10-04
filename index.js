@@ -4,12 +4,11 @@ const mysql = require('mysql');
 const WebSocket = require('ws');
 const config = require('./config');
 const ws = new WebSocket(config.ws);
-const connection = require('./connection');
+const connection = require('./func/connection');
 const echo = require('./plugins/echo');
 const picture = require('./plugins/picture');
+const gp = require('./func/gprint');
 
-//connection.connect();
-//console.log(connection);
 connection.query("show databases like 'Meltibot';", function (err, result) {
 	if(err) {
 		console.log(err.message);
