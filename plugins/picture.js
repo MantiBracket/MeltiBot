@@ -262,7 +262,7 @@ function unfavour(ws, str) {
 	ws.send(JSON.stringify(ret));
 }
 function rank(ws, str) {
-	connection.query("SELECT * from Picturerank ORDER by tot", function (err, result) {
+	connection.query("SELECT * from Picturerank ORDER by tot DESC", function (err, result) {
 		if(err) {
 			console.log(err.message);
 			return;
