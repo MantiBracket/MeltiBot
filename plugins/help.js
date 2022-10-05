@@ -6,7 +6,9 @@ module.exports = {
 	main
 }
 function main(ws, str) {
-    if(!((str.message.split(" ")[0] === "\\help"))) return 0;
+    if(!((str.message.split(" ")[0] === "\\help"))) {
+		return 0;
+	}
 	console.log("help");
     const answerstr = (JSON.parse(fs.readFileSync(path.join(__dirname, '../json/help.json'), 'utf8')))
 

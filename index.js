@@ -6,6 +6,7 @@ const config = require('./config');
 const ws = new WebSocket(config.ws);
 const echo = require('./plugins/echo');
 const picture = require('./plugins/picture');
+const wwf = require('./plugins/wwf');
 const help = require('./plugins/help');
 const connection = require('./func/connection');
 const gp = require('./func/gprint');
@@ -43,6 +44,36 @@ connection.query("show tables like 'Params';", function (err, result) {
 		});
 	}
 });
+function hello(ws, str) {
+	const ret = {
+		"action": "send_private_msg",
+		"params": {
+			"user_id": str.user_id,
+			"message": [
+				{
+					"type": "text",
+					"data": {
+						"text": "hello!This is Meltibot!\n"
+					}
+				},
+				{
+					"type": "image",
+					"data": {
+						"file": "Meltibot.image",
+						"url": "https://c2cpicdw.qpic.cn/offpic_new/949291258//949291258-184568751-BA2B3D42F3AC670F8A4FD71A2DD5FAD1/0?term=3"
+					}
+				},
+				{
+					"type": "text",
+					"data": {
+						"text": "输入\"\\help\"以查看帮助！\n"
+					}
+				},
+			]
+		},
+	}
+	ws.send(JSON.stringify(ret));
+}
 //connection.end();
 ws.onmessage = function (event) {
     const str = JSON.parse(event.data);
@@ -56,35 +87,10 @@ ws.onmessage = function (event) {
 		picture.main(ws, str);
 	} else if(str.message_type === "private") {
 		console.log('private');
-		console.log(str.message);
-		const ret = {
-			"action": "send_private_msg",
-			"params": {
-				"user_id": str.user_id,
-				"message": [
-					{
-						"type": "text",
-						"data": {
-							"text": "hello!This is Meltibot!\n"
-						}
-					},
-					{
-						"type": "image",
-						"data": {
-							"file": "Meltibot.image",
-							"url": "https://c2cpicdw.qpic.cn/offpic_new/949291258//949291258-184568751-BA2B3D42F3AC670F8A4FD71A2DD5FAD1/0?term=3"
-						}
-					},
-					{
-						"type": "text",
-						"data": {
-							"text": "输入\"\\help\"以查看帮助！\n"
-						}
-					},
-				]
-			},
-		}
-		ws.send(JSON.stringify(ret));
+		if(!(wwf.main(ws, str))) {
+		if(!(help.main(ws, str))) {
+			hello(ws, str);
+		}}
 	} else if(str.message_type === "group") {
 		console.log('group');
 		let Ignore = true;

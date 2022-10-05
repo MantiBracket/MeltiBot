@@ -304,7 +304,9 @@ function save(ws, str, id) {
 	let uid=user[id];
 
 	console.log(uid);
-	if(!(str.message.match(/\[CQ:image,/)))return 0;
+	if(!(str.message.match(/\[CQ:image,/))) {
+		return 0;
+	}
 	let file = str.message.split(",file=")[1].split(",")[0];
 	console.log(file);
 	let web = str.message.split(",url=")[1].split("]")[0];
