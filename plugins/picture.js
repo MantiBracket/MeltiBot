@@ -268,6 +268,12 @@ function rank(ws, str) {
 			return;
 		}
 		let message = [{ "data": { "text": "今日份存图榜榜！\n" }, "type": "text" },];
+		if(result.length == 0) {
+			message.push({
+				"type": "text",
+				"data": { "text": "今天没有人存图图！",}
+			});
+		}
 		for(let i = 0; i < 5 && i < result.length; i++) {
 			message.push({
 				"type": "text",
@@ -298,7 +304,7 @@ function save(ws, str, id) {
 	let uid=user[id];
 
 	console.log(uid);
-	if(!(str.message.match(/\[CQ:image,/)))return;
+	if(!(str.message.match(/\[CQ:image,/)))return 0;
 	let file = str.message.split(",file=")[1].split(",")[0];
 	console.log(file);
 	let web = str.message.split(",url=")[1].split("]")[0];
@@ -333,9 +339,9 @@ function save(ws, str, id) {
 				});
 			}
 		});
-		
 	});
 	user[id] = 0;
+	return 1;
 }
 function send(ws, str) {
 	let tag =str.message.substr(1);
@@ -347,7 +353,7 @@ function send(ws, str) {
 		}
 		if(!result.length) {
 			gp.main(ws, "发不出来！", str.sender.user_id, str.group_id);
-			binpicture.main(ws, tag, str.group_id);
+//			binpicture.main(ws, tag, str.group_id);
 			return;
 		}
 		console.log(result);
@@ -372,39 +378,39 @@ function send(ws, str) {
 	});
 }
 function main(ws, str) {
-	if(str.echo) {
+	if(str.echo && str.cho[0] == "picture") {
 		echo(ws, str);
-		return;
+		return 1;
 	}
 	console.log(str.message);
 	if(str.message.match(/\[CQ:reply,/) && str.message.match(/取消收藏/)) {
 		unfavour(ws, str);
-		return;
+		return 1;
 	}
 	if(str.message === 'rank') {
 		rank(ws, str);
-		return;
+		return 1;
 	}
 	if(str.message[0] === '发') {
 		send(ws, str);
-		return;
+		return 1;
 	}
     if((str.message.match(/\[CQ:at,qq=/)) && (str.message.split(" ")[0] === "ban")) {
 		ban(ws, str);
-		return;
+		return 1;
 	}
     if((str.message.match(/\[CQ:at,qq=/)) && (str.message.split(" ")[0] === "unban")) {
 		unban(ws, str);
-		return;
+		return 1;
 	}
 	for(let i = 0; i < user.length; i++) {
 		if(str.sender.user_id === user[i]) {
-			save(ws, str, i);
-			return;
+			return save(ws, str, i);
 		}
 	}
     if(!(str.message.split(" ")[1] === undefined) && (str.message.split(" ")[0] === "收藏") && (str.message.substr(3,4) === "tag=")) {
 		favour(ws, str);
-		return;
+		return 1;
 	}
+	return 0;
 }

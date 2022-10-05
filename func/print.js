@@ -4,19 +4,41 @@ const path = require('path');
 module.exports = {
 	main
 }
-function main(ws, str, id = 0, gid) {
-	if(id == 0)
-	{
+function main(ws, str, id = 0, gid = 0) {
+	if(gid == 0) {
+		const ret = {
+			"action": "send_private_msg",
+			"params": {
+				"user_id": id,
+				"message": [
+					{ "data": { "text": str }, "type": "text" },
+				]
+			},
+		}
+		ws.send(JSON.stringify(ret));
+	} else if(id == 0) {
 		const ret = {
 			"action": "send_group_msg",
 			"params": {
-				"group_id": str.echo[3],
+				"group_id": gid,
 				"message": [
-					{ "data": { "qq": str.echo[2] }, "type": "at" },
-					{ "data": { "text": "没有这个图图！" }, "type": "text" },
+					{ "data": { "text": str }, "type": "text" },
+				]
+			},
+		}
+		ws.send(JSON.stringify(ret));
+	} else {
+		const ret = {
+			"action": "send_group_msg",
+			"params": {
+				"group_id": gid,
+				"message": [
+					{ "data": { "qq": id }, "type": "at" },
+					{ "data": { "text": str }, "type": "text" },
 				]
 			},
 		}
 		ws.send(JSON.stringify(ret));
 	}
+	return ;
 }

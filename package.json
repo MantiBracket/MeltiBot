@@ -19,6 +19,7 @@
   "homepage": "https://github.com/MantiBracket/MeltiBot#readme",
   "dependencies": {
     "mysql": "^2.18.1",
+    "request": "^2.88.2",
     "silly-datetime": "^0.1.2",
     "ws": "^8.9.0"
   }

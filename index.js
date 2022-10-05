@@ -4,10 +4,12 @@ const mysql = require('mysql');
 const WebSocket = require('ws');
 const config = require('./config');
 const ws = new WebSocket(config.ws);
-const connection = require('./func/connection');
 const echo = require('./plugins/echo');
 const picture = require('./plugins/picture');
+const help = require('./plugins/help');
+const connection = require('./func/connection');
 const gp = require('./func/gprint');
+const pp = require('./func/pprint');
 
 connection.query("show databases like 'Meltibot';", function (err, result) {
 	if(err) {
@@ -50,7 +52,7 @@ ws.onmessage = function (event) {
 	}
 //	console.log(str.message_type);
 //	console.log(str);
-	if(str.echo && str.echo[0] == "picture") {
+	if(str.echo) {
 		picture.main(ws, str);
 	} else if(str.message_type === "private") {
 		console.log('private');
@@ -63,7 +65,7 @@ ws.onmessage = function (event) {
 					{
 						"type": "text",
 						"data": {
-							"text": "hello!This is Meltibot!"
+							"text": "hello!This is Meltibot!\n"
 						}
 					},
 					{
@@ -71,6 +73,12 @@ ws.onmessage = function (event) {
 						"data": {
 							"file": "Meltibot.image",
 							"url": "https://c2cpicdw.qpic.cn/offpic_new/949291258//949291258-184568751-BA2B3D42F3AC670F8A4FD71A2DD5FAD1/0?term=3"
+						}
+					},
+					{
+						"type": "text",
+						"data": {
+							"text": "输入\"\\help\"以查看帮助！\n"
 						}
 					},
 				]
@@ -91,8 +99,16 @@ ws.onmessage = function (event) {
 			return;
 		}
 		console.log('work');
-		echo.main(ws, str);
-		picture.main(ws, str);
+		if(!(echo.main(ws, str))) {
+		if(!(picture.main(ws, str))) {
+		if(!(help.main(ws, str))) {
+			console.log("cant match any plugins");
+//			console.log(str.message.match(/\[CQ:at,/));
+//			console.log(str.message.match(RegExp(config.self_id.toString())));
+			if(str.message.match(/\[CQ:at,/) && str.message.match(RegExp(config.self_id.toString()))) {
+				gp.main(ws, "输入\"\\help\"以查看帮助！\n", str.sender.user_id, str.group_id);
+			}
+		}}}
 	} else {
 //		console.log(str);
 //		console.log('unknown message');
