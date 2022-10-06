@@ -16,11 +16,15 @@ function joinroom(ws, str) {
 	}
 	let roomid=str.message.split(" ")[2];
 
+	if(isNaN(Number(roomid)) || !(roomid.length == 4)) {
+		pp.main(ws, "房间名不符合要求！", str.user_id);
+		return;
+	}
 	if(roomlist.get(roomid) == undefined) {
 		roomlist.set(roomid,new Room(roomid));
 		let room = roomlist.get(roomid);
 
-		console.log(str.user_id);
+//		console.log(str.user_id);
 		room.join(str.user_id);
 		pp.main(ws, "你创建了一个房间！并成为了房主！", str.user_id);
 		room.state(ws);
@@ -44,7 +48,7 @@ function main(ws, str) {
     if(!(str.message.split(" ")[0].split("~")[1] === undefined)) {
 		let fakeuser = Number(str.message.split(" ")[0].split("~")[1]);
 
-		if(fakeuser === NaN) {
+		if(isNaN(fakeuser)) {
 			console.log("wrong fakeuser");
 			return 1;
 		}
@@ -86,6 +90,15 @@ function main(ws, str) {
 		room.state(ws, str.user_id);
 		return 1;
 	}
+	if(str.message.split(" ")[1] === "quit") {
+		room.quit(ws, str.user_id);
+		playerlist.delete(str.user_id);
+		if(roomid.nowplayer == 0) {
+			roomlist.delete(roomid);
+		}
+		pp.main(ws, "你已成功退出房间！", str.user_id);
+		return 1;
+	}
 	if(str.message.split(" ")[1] === "nickname") {
 		let res = room.nickname(ws, str.user_id, str.message.split(" ")[2]);
 
@@ -115,6 +128,34 @@ function main(ws, str) {
 		}
 		pp.main(ws, "已启动游戏！", str.user_id);
 		room.begin(ws);
+		return 1;
+	}
+	if(player.dead) {
+		pp.main(ws, "你死了，你想干嘛？", str.user_id);
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "murder") {
+		if(!(player.role == "werewolf")) {
+			pp.main(ws, "你不是狼人！", str.user_id);
+			return 1;
+		}
+		if(!room.turn == "werewolf") {
+			pp.main(ws, "你现在不能动手！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			room.murder(ws, str.user_id, "-1");
+		} else {
+			pp.main(ws, room.murder(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
+		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "tell") {
+		if(str.message.split(" ")[3] === undefined){
+			pp.main(ws, "缺乏参数", str.user_id);
+			return 1;
+		}
+		room.tell(ws, str.user_id, str.message.split(" ")[2], str.message.split(" ")[3]);
 		return 1;
 	}
 	return 0;
