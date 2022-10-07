@@ -6,7 +6,7 @@ const config = require('../config');
 const self_id = config.self_id;
 const date = require("silly-datetime");
 const gp = require('../func/gprint');
-const binpicture = require('../func/binpicture');
+//const crawler = require('../func/crawler');
 
 module.exports = {
 	main
@@ -157,6 +157,7 @@ function echo(ws, str) {
 			}
 			if(result.length === 0) {
 				gp.main(ws, "没有这个图图！", str.echo[2], str.echo[3]);
+//				crawler.main();
 				return;
 			}
 			let user2_id = result[0].userID;

@@ -87,6 +87,12 @@ class room {
 					"data": { "text": " 离开",}
 				});
 			}
+			if(this.playerlist[i].issheriff) {
+				message.push({
+					"type": "text",
+					"data": { "text": " 警长",}
+				});
+			}
 			message.push({
 				"type": "text",
 				"data": { "text": " \n",}
@@ -458,6 +464,7 @@ class room {
 			}
 			console.log([this.playerlist[i].nickname," : ",cha[i]].join(''));
 		}
+		this.turn = "lastword";
 		this.next(ws);
 	}
 	next(ws) {
@@ -491,7 +498,10 @@ class room {
 			this.gp(ws, "回到等待房间~");
 			return;
 		}
-		if(this.turn == "waiting" || this.turn == "lastword") {
+		if(this.turn == "waiting") {
+			return;
+		}
+		if(this.turn == "lastword") {
 			this.day++;
 			this.gp(ws, "天黑请闭眼~");
 			this.turn = "werewolf";
@@ -572,6 +582,12 @@ class room {
 				this.gp(ws, "今天是第一天，请选择是否竞选警长");
 			} else {
 				this.turn = "day";
+				if(this.killlist.length == 0){
+					this.gp(ws, "昨晚是平安夜~");
+				} else {
+					this.gp(ws, "昨天晚上~：");
+					this.cleankilllist(ws);
+				}
 				this.next(ws);
 			}
 			return;
@@ -651,6 +667,7 @@ class room {
 				return "人不能死两次，对吧？";
 			}
 			this.killplayer(ws, target, "hunter");
+			this.cleankilllist(ws);
 			this.next(ws);
 			return "杀人成功！";
 		}
@@ -988,7 +1005,7 @@ class room {
 		} else {
 			this.gp(ws, "游戏结束！狼人胜利！");
 		}
-		this.printrole();
+		this.printrole(ws);
 		for(;;) {
 			let del = false;
 
