@@ -14,6 +14,7 @@ function main(ws, str, pid) {
 			]
 		},
 	}
+	console.log([pid.toString(), " : ", str].join(''));
 	ws.send(JSON.stringify(ret));
 	return ;
 }

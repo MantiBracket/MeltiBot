@@ -52,11 +52,11 @@ function main(ws, str) {
 			console.log("wrong fakeuser");
 			return 1;
 		}
-		if(str.user_id == config.owner_id) {
+//		if(str.user_id == config.owner_id) {
 			str.user_id = fakeuser;
 			console.log("userID changed");
 		}
-    }
+//    }
 	if(str.message.split(" ")[1] === "join") {
 		joinroom(ws, str);
 		return 1;
@@ -74,7 +74,7 @@ function main(ws, str) {
 			pp.main(ws, "你没有权限！", str.user_id);
 			return 1;
 		}
-		if(!room.turn == "waiting") {
+		if(!(room.turn == "waiting")) {
 			pp.main(ws, "无法在游戏开始后修改配置！", str.user_id);
 			return 1;
 		}
@@ -122,7 +122,7 @@ function main(ws, str) {
 			pp.main(ws, "人数不足！", str.user_id);
 			return 1;
 		}
-		if(!room.turn == "waiting") {
+		if(!(room.turn == "waiting")) {
 			pp.main(ws, "一局游戏无法开始两次！", str.user_id);
 			return 1;
 		}
@@ -130,8 +130,40 @@ function main(ws, str) {
 		room.begin(ws);
 		return 1;
 	}
-	if(player.dead) {
-		pp.main(ws, "你死了，你想干嘛？", str.user_id);
+	if(str.message.split(" ")[1] === "givesh") {
+		if(!(player.issheriff)) {
+			pp.main(ws, "你不是警长！", str.user_id);
+			return 1;
+		}
+		if(!(room.turn == "givesh")) {
+			pp.main(ws, "你现在不能送出警徽！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			pp.main(ws, room.givesheriff(ws, str.user_id, "-1"), str.user_id);
+		} else {
+			pp.main(ws, room.givesheriff(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
+		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "hunter") {
+		if(!(player.role == "hunter")) {
+			pp.main(ws, "你不是猎人！", str.user_id);
+			return 1;
+		}
+		if(!(room.turn == "hunter")) {
+			pp.main(ws, "你现在不能动手！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			pp.main(ws, room.hunterkill(ws, str.user_id, "-1"), str.user_id);
+		} else {
+			pp.main(ws, room.hunterkill(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
+		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "printrole") {
+		room.printrole(ws);
 		return 1;
 	}
 	if(str.message.split(" ")[1] === "next" || str.message.split(" ")[1] === "night") {
@@ -145,51 +177,23 @@ function main(ws, str) {
 		}
 		room.next(ws);
 	}
+	if(player.dead) {
+		pp.main(ws, "你死了，你想干嘛？", str.user_id);
+		return 1;
+	}
 	if(str.message.split(" ")[1] === "murder") {
 		if(!(player.role == "werewolf")) {
 			pp.main(ws, "你不是狼人！", str.user_id);
 			return 1;
 		}
-		if(!room.turn == "werewolf") {
+		if(!(room.turn == "werewolf")) {
 			pp.main(ws, "你现在不能动手！", str.user_id);
 			return 1;
 		}
 		if(str.message.split(" ")[2] === undefined) {
-			room.murder(ws, str.user_id, "-1");
+			pp.main(ws, room.murder(ws, str.user_id, "-1"), str.user_id);
 		} else {
 			pp.main(ws, room.murder(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
-		}
-		return 1;
-	}
-	if(str.message.split(" ")[1] === "givesh") {
-		if(!(player.issheriff)) {
-			pp.main(ws, "你不是警长！", str.user_id);
-			return 1;
-		}
-		if(!room.turn == "givesh") {
-			pp.main(ws, "你现在不能送出警徽！", str.user_id);
-			return 1;
-		}
-		if(str.message.split(" ")[2] === undefined) {
-			room.givesheriff(ws, str.user_id, "-1");
-		} else {
-			pp.main(ws, room.givesheriff(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
-		}
-		return 1;
-	}
-	if(str.message.split(" ")[1] === "hunter") {
-		if(!(player.role == "hunter")) {
-			pp.main(ws, "你不是猎人！", str.user_id);
-			return 1;
-		}
-		if(!room.turn == "hunter") {
-			pp.main(ws, "你现在不能动手！", str.user_id);
-			return 1;
-		}
-		if(str.message.split(" ")[2] === undefined) {
-			room.hunterkill(ws, str.user_id, "-1");
-		} else {
-			pp.main(ws, room.hunterkill(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
 		}
 		return 1;
 	}
@@ -198,7 +202,7 @@ function main(ws, str) {
 			pp.main(ws, "你不是预言家！", str.user_id);
 			return 1;
 		}
-		if(!room.turn == "seer") {
+		if(!(room.turn == "seer")) {
 			pp.main(ws, "你现在不能动手！", str.user_id);
 			return 1;
 		}
@@ -214,12 +218,12 @@ function main(ws, str) {
 			pp.main(ws, "你不是女巫！", str.user_id);
 			return 1;
 		}
-		if(!room.turn == "witch") {
+		if(!(room.turn == "witch")) {
 			pp.main(ws, "你现在不能动手！", str.user_id);
 			return 1;
 		}
 		if(str.message.split(" ")[2] === undefined) {
-			room.usepotion(ws, str.user_id, "-1");
+			pp.main(ws, room.usepotion(ws, str.user_id, "-1"), str.user_id);
 		} else {
 			if(str.message.split(" ")[3] === undefined) {
 				pp.main(ws, "未确定目标！", str.user_id);
@@ -230,31 +234,31 @@ function main(ws, str) {
 		return 1;
 	}
 	if(str.message.split(" ")[1] === "vote") {
-		if(!room.turn == "vote") {
+		if(!(room.turn == "vote")) {
 			pp.main(ws, "你现在不能投票！", str.user_id);
 			return 1;
 		}
 		if(str.message.split(" ")[2] === undefined) {
-			room.vote(ws, str.user_id, "-1");
+			pp.main(ws, room.vote(ws, str.user_id, "-1"), str.user_id);
 		} else {
 			pp.main(ws, room.vote(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
 		}
 		return 1;
 	}
 	if(str.message.split(" ")[1] === "votesh") {
-		if(!room.turn == "sheriff2") {
+		if(!(room.turn == "sheriff2")) {
 			pp.main(ws, "你现在不能投票！", str.user_id);
 			return 1;
 		}
 		if(str.message.split(" ")[2] === undefined) {
-			room.votesh(ws, str.user_id, "-1");
+			pp.main(ws, room.votesh(ws, str.user_id, "-1"), str.user_id);
 		} else {
 			pp.main(ws, room.votesh(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
 		}
 		return 1;
 	}
 	if(str.message.split(" ")[1] === "besheriff" || str.message.split(" ")[1] === "notsheriff") {
-		if(!room.turn == "sheriff1") {
+		if(!(room.turn == "sheriff1")) {
 			pp.main(ws, "你现在不能选择！", str.user_id);
 			return 1;
 		}

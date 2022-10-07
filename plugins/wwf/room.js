@@ -4,6 +4,7 @@ const { threadId } = require('../../func/connection');
 const pp = require('../../func/pprint');
 const Player = require('./player');
 const Check = require('./check');
+const player = require('./player');
 
 class room {
 	gp(ws, str) {
@@ -63,22 +64,33 @@ class room {
 			"type": "text",
 			"data": { "text": "以下是玩家列表：\n",}
 		});
-		for(let i = 0;i < this.playerlist.length;i++) {
+		for(let i = 0; i < this.playerlist.length;i++) {
 			message.push({
 				"type": "text",
-				"data": { "text": ["玩家", (i+1).toString(), "： 昵称：", this.playerlist[i].nickname, " QQ号：", this.playerlist[i].id.toString()].join(''),}
+				"data": { "text": ["玩家", (i + 1).toString(), "： 昵称：", this.playerlist[i].nickname, " QQ号：", this.playerlist[i].id.toString()].join(''),}
 			});
 			if(this.ownerid == i) {
 				message.push({
 					"type": "text",
-					"data": { "text": " 房主\n",}
-				});
-			} else {
-				message.push({
-					"type": "text",
-					"data": { "text": " \n",}
+					"data": { "text": " 房主",}
 				});
 			}
+			if(this.playerlist[i].dead) {
+				message.push({
+					"type": "text",
+					"data": { "text": " 死亡",}
+				});
+			}
+			if(this.playerlist[i].leave) {
+				message.push({
+					"type": "text",
+					"data": { "text": " 离开",}
+				});
+			}
+			message.push({
+				"type": "text",
+				"data": { "text": " \n",}
+			});
 		}
 //		console.log(message);
 		if(!userID) {
@@ -117,7 +129,7 @@ class room {
 			}
 		}
 		for(let i = 0;i < this.playerlist.length;i++) {
-			if(this.playerlist[i].place === id) {
+			if(this.playerlist[i].place + 1 === id) {
 				return this.playerlist[i];
 			}
 		}
@@ -130,7 +142,7 @@ class room {
 			}
 		}
 		for(let i = 0;i < this.playerlist.length;i++) {
-			if(this.playerlist[i].place == nid) {
+			if(this.playerlist[i].place + 1 == nid) {
 				return this.playerlist[i];
 			}
 		}
@@ -180,12 +192,14 @@ class room {
 				this.emer = true;
 				this.gp(ws, ["玩家 ", this.killlist[i].player.id, " 是猎人！"].join(''));
 			}
-			if(this.killlist[i].player.issheriff) {
-				this.givesh = true;
+			if(this.killlist[i].player.issheriff ) {
+				if(this.killlist[i].player.leave) {
+					this.killlist[i].player.issheriff = false;
+					this.sheriffis = 0;
+				} else {
+					this.givesh = true;
+				}
 			}
-		}
-		if(this.emer || this.givesh) {
-			this.turn();
 		}
 		this.killlist.splice(0,this.killlist.length);
 		if(!(this.turn == "end" || this.turn == "waiting") && this.iswin()) {
@@ -243,6 +257,9 @@ class room {
 			if(this.turn != "werewolf" && this.turn != "seer" && this.turn != "sheriff1" && this.turn != "sheriff2" && this.turn != "day") {
 				cleankilllist(ws);
 			}
+			if(!(this.turn == "end" || this.turn == "waiting") && this.iswin()) {
+				this.end(ws, this.iswin());
+			}
 		}
 	}
 	nickname(ws, playerid, name) {
@@ -270,7 +287,7 @@ class room {
 		let villager = 0;
 		let night = (this.turn == "lastword");
 
-		for(let i = 0; i < this.maxplayer; i++) {
+		for(let i = 0; i < this.nowplayer; i++) {
 			if(!(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
 				if(this.playerlist[i].role == "werewolf") {
 					werewolf++;
@@ -424,15 +441,15 @@ class room {
 		cha.sort(function () {
 			return Math.random() - 0.5;
 		});
-		for(let i = 0; i < this.maxplayer; i++) {
+		for(let i = 0; i < this.nowplayer; i++) {
 			this.playerlist[i].role = cha[i];
 		}
-		for(let i = 0; i < this.maxplayer; i++) {
+		for(let i = 0; i < this.nowplayer; i++) {
 			pp.main(ws, ["你的角色是： ", cha[i]].join(''), this.playerlist[i].id);
 			if(cha[i] == "werewolf") {
 				let message = "你的队友是：\n";
 
-				for(let j = 0; j < this.maxplayer; j++) {
+				for(let j = 0; j < this.nowplayer; j++) {
 					if(!(i == j) && (cha[j] == "werewolf")) {
 						message = [message, this.playerlist[j].nickname, "\n"].join('');
 					}
@@ -444,6 +461,7 @@ class room {
 		this.next(ws);
 	}
 	next(ws) {
+		console.log(["end turn! : ",this.turn].join(''));
 		if(this.emer == true) {
 			this.turn2 = this.turn;
 			this.turn = "hunter";
@@ -477,18 +495,23 @@ class room {
 			this.day++;
 			this.gp(ws, "天黑请闭眼~");
 			this.turn = "werewolf";
-			for(let i = 0; i < this.maxplayer; i++) {
-				if(this.playerlist[i].role == "werewolf") {
+			for(let i = 0; i < this.nowplayer; i++) {
+				if(this.playerlist[i].role == "werewolf" && !(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
 					pp.main(ws, "狼人请睁眼~\n请选择要刀的人~",this.playerlist[i].id);
 				}
 			}
 			return;
 		}
 		if(this.turn == "werewolf") {
+			for(let i = 0; i < this.nowplayer; i++) {
+				if(this.playerlist[i].role == "werewolf" && !(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
+					pp.main(ws, "狼人请闭眼~",this.playerlist[i].id);
+				}
+			}
 			this.turn = "seer";
 			let getseer = false;
 
-			for(let i = 0; i < this.maxplayer; i++) {
+			for(let i = 0; i < this.nowplayer; i++) {
 				if(this.playerlist[i].role == "seer" && !(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
 					pp.main(ws, "预言家请睁眼~\n请选择要查的人~",this.playerlist[i].id);
 					getseer = true;
@@ -501,22 +524,31 @@ class room {
 			return;
 		}
 		if(this.turn == "seer") {
+			for(let i = 0; i < this.nowplayer; i++) {
+				if(this.playerlist[i].role == "seer" && !(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
+					pp.main(ws, "预言家请闭眼~",this.playerlist[i].id);
+				}
+			}
 			this.turn = "witch";
 			let getwitch = false;
 
-			for(let i = 0; i < this.maxplayer; i++) {
+			for(let i = 0; i < this.nowplayer; i++) {
 				if(this.playerlist[i].role == "witch" && !(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
 					getwitch = true;
 					let mess = "女巫请睁眼~\n";
 
 					if(this.potion1) {
 						mess = [mess, "晚上， "].join('');
-						for(let i = 0; i < this.killlist.length; i++) {
-							if(this.killlist[i].mess == "werewolf") {
-								mess = [mess, this.killlist[i].player.nickname].join('');
+						if(this.killlist.length) {
+							for(let i = 0; i < this.killlist.length; i++) {
+								if(this.killlist[i].mess == "werewolf") {
+									mess = [mess, this.killlist[i].player.nickname].join('');
+								}
 							}
+							mess = [mess, " 死了\n"].join('');
+						} else {
+							mess = [mess, " 无人死亡\n"].join('');
 						}
-						mess = [mess, " 死了\n"].join('');
 					}
 					mess = [mess, "请选择用药"].join('');
 					pp.main(ws, mess, this.playerlist[i].id);
@@ -529,12 +561,18 @@ class room {
 			return;
 		}
 		if(this.turn == "witch") {
+			for(let i = 0; i < this.maxplayer; i++) {
+				if(this.playerlist[i].role == "witch" && !(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
+					pp.main(ws, "女巫请闭眼~",this.playerlist[i].id);
+				}
+			}
 			this.gp(ws, "天亮请睁眼~");
 			if(this.day == 1 && this.sheriff) {
 				this.turn = "sheriff1";
 				this.gp(ws, "今天是第一天，请选择是否竞选警长");
 			} else {
 				this.turn = "day";
+				this.next(ws);
 			}
 			return;
 		}
@@ -545,18 +583,22 @@ class room {
 		}
 		if(this.turn == "sheriff2") {
 			this.turn = "day";
+			if(this.killlist.length == 0){
+				this.gp(ws, "昨晚是平安夜~");
+			} else {
+				this.gp(ws, "昨天晚上~：");
+				this.cleankilllist(ws);
+			}
 			this.next(ws);
 			return;
 		}
 		if(this.turn == "day") {
-			if(this.killlist.length == 0){
-				this.gp(ws, "昨晚是平安夜~");
+			if(this.emer || this.givesh) {
+				this.next(ws);
 			} else {
-				this.gp(ws, "昨天晚上~：\n");
-				this.cleankilllist(ws);
+				this.turn = "vote";
+				this.gp(ws, "请各位轮流发言，之后进行投票");
 			}
-			this.turn = "vote";
-			this.gp(ws, "请各位轮流发言，之后进行投票");
 			return;
 		}
 		if(this.turn == "vote") {
@@ -614,14 +656,15 @@ class room {
 		}
 	}
 	tell(ws, playerid, type, str) {
-		if(!(type == "common") && !(type == "werewolf")) {
-			return;
-		}
 		let player = this.getplayer(playerid);
 
-		for(let i = 0; i < this.maxplayer; i++) {
+		if(!(type == "common") && !(type == "werewolf")) {
+			pp.main(ws, "错误的聊天对象！", player.id);
+			return;
+		}
+		for(let i = 0; i < this.nowplayer; i++) {
 			if(!(player.place == i) && (type == "common" || this.playerlist[i].role == "werewolf")) {
-				pp.main(ws, [player.nickname, " ： ", str].join(''));
+				pp.main(ws, [player.nickname, " ： ", str].join(''), this.playerlist[i].id);
 			}
 		}
 		return;
@@ -797,7 +840,7 @@ class room {
 	votesh(ws, playerid, str) {
 		let player = this.getplayer(playerid);
 
-		if(!player.target) {
+		if(player.target) {
 			return "你不能投票！";
 		}
 		if(!(player.vote == -1)) {
@@ -930,19 +973,22 @@ class room {
 		}
 		return "成功选择！";
 	}
+	printrole(ws) {
+		let message = "各玩家角色是：\n";
+
+		for(let i = 0; i < this.nowplayer; i++) {
+			message = [message, this.playerlist[i].nickname, "：", this.playerlist[i].role, "\n"].join('');
+		}
+		this.gp(ws, message);
+	}
 	end(ws, win) {
 		this.turn = "end";
-		if(win == -1) {
+		if(win == 1) {
 			this.gp(ws, "游戏结束！好人胜利！");
 		} else {
 			this.gp(ws, "游戏结束！狼人胜利！");
 		}
-		let message = "各玩家角色是：\n";
-
-		for(let i = 0; i < this.maxplayer; i++) {
-			message = [message, this.playerlist[i].nickname, "：", this.playerlist[i].role, "\n"].join('');
-		}
-		this.gp(ws, message);
+		this.printrole();
 		for(;;) {
 			let del = false;
 
