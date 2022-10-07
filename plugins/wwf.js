@@ -134,6 +134,17 @@ function main(ws, str) {
 		pp.main(ws, "你死了，你想干嘛？", str.user_id);
 		return 1;
 	}
+	if(str.message.split(" ")[1] === "next" || str.message.split(" ")[1] === "night") {
+		if(!player.isowner) {
+			pp.main(ws, "没有权限！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[1] === "night" && !(room.turn == "lastword")) {
+			pp.main(ws, "还不能进入夜晚！", str.user_id);
+			return 1;
+		}
+		room.next(ws);
+	}
 	if(str.message.split(" ")[1] === "murder") {
 		if(!(player.role == "werewolf")) {
 			pp.main(ws, "你不是狼人！", str.user_id);
@@ -148,6 +159,106 @@ function main(ws, str) {
 		} else {
 			pp.main(ws, room.murder(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
 		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "givesh") {
+		if(!(player.issheriff)) {
+			pp.main(ws, "你不是警长！", str.user_id);
+			return 1;
+		}
+		if(!room.turn == "givesh") {
+			pp.main(ws, "你现在不能送出警徽！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			room.givesheriff(ws, str.user_id, "-1");
+		} else {
+			pp.main(ws, room.givesheriff(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
+		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "hunter") {
+		if(!(player.role == "hunter")) {
+			pp.main(ws, "你不是猎人！", str.user_id);
+			return 1;
+		}
+		if(!room.turn == "hunter") {
+			pp.main(ws, "你现在不能动手！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			room.hunterkill(ws, str.user_id, "-1");
+		} else {
+			pp.main(ws, room.hunterkill(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
+		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "seer") {
+		if(!(player.role == "seer")) {
+			pp.main(ws, "你不是预言家！", str.user_id);
+			return 1;
+		}
+		if(!room.turn == "seer") {
+			pp.main(ws, "你现在不能动手！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			pp.main(ws, "未确定目标！", str.user_id);
+			return 1;
+		}
+		pp.main(ws, room.foresee(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "witch") {
+		if(!(player.role == "witch")) {
+			pp.main(ws, "你不是女巫！", str.user_id);
+			return 1;
+		}
+		if(!room.turn == "witch") {
+			pp.main(ws, "你现在不能动手！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			room.usepotion(ws, str.user_id, "-1");
+		} else {
+			if(str.message.split(" ")[3] === undefined) {
+				pp.main(ws, "未确定目标！", str.user_id);
+				return 1;
+			}
+			pp.main(ws, room.usepotion(ws, str.user_id, str.message.split(" ")[2], str.message.split(" ")[3]), str.user_id);
+		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "vote") {
+		if(!room.turn == "vote") {
+			pp.main(ws, "你现在不能投票！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			room.vote(ws, str.user_id, "-1");
+		} else {
+			pp.main(ws, room.vote(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
+		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "votesh") {
+		if(!room.turn == "sheriff2") {
+			pp.main(ws, "你现在不能投票！", str.user_id);
+			return 1;
+		}
+		if(str.message.split(" ")[2] === undefined) {
+			room.votesh(ws, str.user_id, "-1");
+		} else {
+			pp.main(ws, room.votesh(ws, str.user_id, str.message.split(" ")[2]), str.user_id);
+		}
+		return 1;
+	}
+	if(str.message.split(" ")[1] === "besheriff" || str.message.split(" ")[1] === "notsheriff") {
+		if(!room.turn == "sheriff1") {
+			pp.main(ws, "你现在不能选择！", str.user_id);
+			return 1;
+		}
+		pp.main(ws, room.besh(ws, str.user_id, str.message.split(" ")[1]), str.user_id);
 		return 1;
 	}
 	if(str.message.split(" ")[1] === "tell") {

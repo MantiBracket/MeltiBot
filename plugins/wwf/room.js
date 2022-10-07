@@ -3,6 +3,7 @@ const path = require('path');
 const { threadId } = require('../../func/connection');
 const pp = require('../../func/pprint');
 const Player = require('./player');
+const Check = require('./check');
 
 class room {
 	gp(ws, str) {
@@ -36,6 +37,17 @@ class room {
 				this.witchtot, "女巫", 
 				this.huntertot, "猎人", ].join(''),}
 		});
+		if(this.sheriff) {
+			message.push({
+				"type": "text",
+				"data": { "text": " 有警长 ",}
+			});
+		} else {
+			message.push({
+				"type": "text",
+				"data": { "text": " 无警长 ",}
+			});
+		}
 		if(this.killall) {
 			message.push({
 				"type": "text",
@@ -164,7 +176,7 @@ class room {
 				this.potion1 = 0;
 				this.potion2 = 0;
 			}
-			if(this.killlist[i].player.role == "hunter" && !(this.killlist[i].mess == "witch")) {
+			if(this.killlist[i].player.role == "hunter" && !this.killlist[i].player.leave && !(this.killlist[i].mess == "witch")) {
 				this.emer = true;
 				this.gp(ws, ["玩家 ", this.killlist[i].player.id, " 是猎人！"].join(''));
 			}
@@ -172,8 +184,11 @@ class room {
 				this.givesh = true;
 			}
 		}
+		if(this.emer || this.givesh) {
+			this.turn();
+		}
 		this.killlist.splice(0,this.killlist.length);
-		if(this.iswin()) {
+		if(!(this.turn == "end" || this.turn == "waiting") && this.iswin()) {
 			this.end(ws, this.iswin());
 		}
 	}
@@ -212,11 +227,22 @@ class room {
 			if(this.nowplayer)this.state(ws);
 		} else if(player.dead) {
 			player.leave = true;
+			if(this.turn == "hunter" && player.role == "hunter") {
+				this.next(ws);
+			}
 		} else {
 			this.killplayer(player, "quit");
 			player.leave = true;
 			this.gp(ws, ["玩家", player.nickname, "退出游戏"].join(''));
-			if(this.turn != "werewolf" && this.turn != "seer" && this.turn != "witch")cleankilllist(ws);
+			if(this.turn == "seer" && player.role == "seer") {
+				this.next(ws);
+			}
+			if(this.turn == "witch" && player.role == "witch") {
+				this.next(ws);
+			}
+			if(this.turn != "werewolf" && this.turn != "seer" && this.turn != "sheriff1" && this.turn != "sheriff2" && this.turn != "day") {
+				cleankilllist(ws);
+			}
 		}
 	}
 	nickname(ws, playerid, name) {
@@ -239,17 +265,23 @@ class room {
 		return 1;
 	}
 	iswin() {
-		if(this.werewolftot < 1 )return -1;
-		if(this.maxplayer == this.huntertot + this.werewolftot + this.villagertot && this.killall == false) {
-			if(this.maxplayer - 2 * werewolftot < 2) {
-				return 1;
-			}
-		} else {
-			if(this.maxplayer - 2 * this.werewolftot < 2 - this.witchtot - this.huntertot){
-				return 1;
+		let werewolf = 0;
+		let god = 0;
+		let villager = 0;
+		let night = (this.turn == "lastword");
+
+		for(let i = 0; i < this.maxplayer; i++) {
+			if(!(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
+				if(this.playerlist[i].role == "werewolf") {
+					werewolf++;
+				} else if(this.playerlist[i].role == "villager") {
+					villager++;
+				} else {
+					god++;
+				}
 			}
 		}
-		return 0;
+		return Check.check(this.huntertot, this.sheriff == 1, this.potion1, this.potion2, werewolf, god, villager, this.killall, night);
 	}
 	config(str) {
 		let witch = this.witchtot;
@@ -348,20 +380,7 @@ class room {
 		if(killall == false && (villager == 0 || player - werewolf - villager == 0)) {
 			return "没有某方势力请选择屠城规则！";
 		}
-		let room1 = new room("test");
-
-		room1.maxplayer = player;
-		room1.villagertot = villager;
-		room1.werewolftot = werewolf;
-		room1.huntertot = hunter;
-		room1.hunterlive = hunter;
-		room1.witchtot = witch;
-		room1.potion1 = witch;
-		room1.potion2 = witch;
-		room1.seertot = seer;
-		room1.killall = killall;
-		room1.sheriff = sheriff;
-		if(room1.iswin) {
+		if(Check.check(hunter, sheriff, witch, witch, werewolf, seer + hunter + witch, villager, killall, 1)) {
 			return "游戏配置不合理！";
 		}
 		this.maxplayer = player;
@@ -422,6 +441,7 @@ class room {
 			}
 			console.log([this.playerlist[i].nickname," : ",cha[i]].join(''));
 		}
+		this.next(ws);
 	}
 	next(ws) {
 		if(this.emer == true) {
@@ -451,6 +471,7 @@ class room {
 		if(this.turn == "end") {
 			this.turn = "waiting";
 			this.gp(ws, "回到等待房间~");
+			return;
 		}
 		if(this.turn == "waiting" || this.turn == "lastword") {
 			this.day++;
@@ -461,6 +482,7 @@ class room {
 					pp.main(ws, "狼人请睁眼~\n请选择要刀的人~",this.playerlist[i].id);
 				}
 			}
+			return;
 		}
 		if(this.turn == "werewolf") {
 			this.turn = "seer";
@@ -543,13 +565,13 @@ class room {
 			return;
 		}
 	}
-	giveshieriff(ws, playerid, str) {
+	givesheriff(ws, playerid, str) {
 		let player = this.getplayer(playerid);
 
 		player.issheriff = false;
 		if(str == "-1") {
 			this.sheriffis = 0;
-			this.next();
+			this.next(ws);
 			return "你把警徽送进了坟墓";
 		} else {
 			let target = this.getplayer(str);
@@ -567,7 +589,7 @@ class room {
 			} else {
 				this.sheriffis = 1;
 			}
-			this.next();
+			this.next(ws);
 			return "警徽送出成功！";
 		}
 	}
@@ -575,7 +597,7 @@ class room {
 		let player = this.getplayer(playerid);
 
 		if(str == "-1") {
-			this.next();
+			this.next(ws);
 			return "你选择了仁慈";
 		} else {
 			let target = this.getplayer(str);
@@ -587,7 +609,7 @@ class room {
 				return "人不能死两次，对吧？";
 			}
 			this.killplayer(ws, target, "hunter");
-			this.next();
+			this.next(ws);
 			return "杀人成功！";
 		}
 	}
@@ -608,7 +630,7 @@ class room {
 		let player = this.getplayer(playerid);
 
 		if(str == "-1") {
-			this.next();
+			this.next(ws);
 			return "你选择了仁慈";
 		} else {
 			let target = this.getplayer(str);
@@ -620,7 +642,7 @@ class room {
 				return "人不能死两次，对吧？";
 			}
 			this.killplayer(ws, target, "werewolf");
-			this.next();
+			this.next(ws);
 			return "杀人成功！";
 		}
 	}
@@ -640,14 +662,14 @@ class room {
 		} else {
 			ret = "这个人是良民！";
 		}
-		this.next();
+		this.next(ws);
 		return ret;
 	}
 	usepotion(ws, playerid, str1, str2 = "") {
 		let player = this.getplayer(playerid);
 
 		if(str1 == "-1") {
-			this.next();
+			this.next(ws);
 			return "你袖手旁观";
 		} else if(str1 == "kill") {
 			let target = this.getplayer(str2);
@@ -665,7 +687,7 @@ class room {
 			}
 			this.potion1--;
 			this.killplayer(ws, target, "werewolf");
-			this.next();
+			this.next(ws);
 			return "杀人成功！";
 		} else if(str1 == "heal") {
 			let heal = false;
@@ -681,7 +703,7 @@ class room {
 				return "没有可救目标！";
 			}
 			potion--;
-			this.next();
+			this.next(ws);
 			return "救人成功！";
 		} else {
 			return "错误的选项";
@@ -859,8 +881,10 @@ class room {
 		player.bevote = 1;
 		if(str == "besheriff") {
 			player.target = true;
-		} else {
+		} else if(str == "notsheriff") {
 			player.target = false;
+		} else {
+			return "错误的选项！";
 		}
 		let finish = true;
 
@@ -902,11 +926,12 @@ class room {
 				}
 			}
 			this.gp(ws, mess);
-			this.next();
+			this.next(ws);
 		}
 		return "成功选择！";
 	}
 	end(ws, win) {
+		this.turn = "end";
 		if(win == -1) {
 			this.gp(ws, "游戏结束！好人胜利！");
 		} else {
@@ -932,7 +957,6 @@ class room {
 				break;
 			}
 		}
-		this.turn = "end";
 		this.emer = false;
 		this.givesh = false;
 		this.liveplayer = 0;
@@ -947,6 +971,7 @@ class room {
 			this.playerlist[i].dead = false;
 		}
 		this.state(ws);
+		this.next(ws);
 	}
 	constructor(roomid) {
 		this.id = roomid;
