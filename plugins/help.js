@@ -23,6 +23,10 @@ function main(ws, str) {
 		pr.main(ws, answerstr.wwf.text, str.sender.user_id, str.group_id);
 	} else if(str.message.split(" ")[1] === "wwfrule") {
 		pr.main(ws, answerstr.wwfrule.text, str.sender.user_id, str.group_id);
+	} else if(str.message.split(" ")[1] === "ban") {
+		pr.main(ws, answerstr.ban.text, str.sender.user_id, str.group_id);
+	} else if(str.message.split(" ")[1] === "future") {
+		pr.main(ws, answerstr.future.text, str.sender.user_id, str.group_id);
 	} else {
 		pr.main(ws, "没有这个帮助条目！", str.sender.user_id, str.group_id);
 	}

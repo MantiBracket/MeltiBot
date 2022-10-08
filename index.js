@@ -76,6 +76,38 @@ function hello(ws, str) {//如果私聊消息无法被插件接收则打招呼�
 	}
 	ws.send(JSON.stringify(ret));
 }
+function ban(ws, str) {
+//	console.log('ok1');
+    if(!((str.message.split(" ")[0] === "\\banbot") || (str.message.split(" ")[0] === "\\unbanbot"))) {//非本命令
+		return 0;
+	}
+	if(str.message.split(" ")[0] === "\\banbot") {
+		for (let i = 0; i < bangroup.length; i++) {
+			if(bangroup[i] == str.group_id) {
+				return 1;
+			}
+		}
+		for (let i = 0; i < bangroup.length; i++) {
+			if(bangroup[i] == 0) {
+				bangroup[i] = str.group_id;
+				gp.main(ws, "蝎蝎在本群自闭了！", 0, str.group_id);
+				return 1;
+			}
+		}
+		bangroup.push(str.group_id);
+				gp.main(ws, "蝎蝎在本群自闭了！", 0, str.group_id);
+		return 1;
+	} else {
+		for (let i = 0; i < bangroup.length; i++) {
+			if(bangroup[i] === str.group_id) {
+				bangroup[i] = 0;
+				gp.main(ws, "蝎蝎在本群不自闭了！", 0, str.group_id);
+				return 1;
+			}
+		}
+		gp.main(ws, "蝎蝎在本群已经不自闭了！", 0, str.group_id);
+	}
+}
 //connection.end();
 ws.onmessage = function (event) {//bot的所有行动均为触发式（是这么叫吗），也就是只在传入消息的时候回应
 //这个设计似乎不怎么好？至少在狼人杀的实现上导致了一些不小的麻烦
@@ -101,6 +133,18 @@ ws.onmessage = function (event) {//bot的所有行动均为触发式（是这么
 		for (let i = 0; i < config.group_id.length; i++) { //是否为允许的群
 			if(config.group_id[i] === str.group_id) {
 				Ignore = false;
+				break;
+			}
+		}
+		if(Ignore == true) {
+			return;
+		}
+		if(ban(ws, str)) {
+			return;
+		}
+		for (let i = 0; i < bangroup.length; i++) { //是否为ban的群
+			if(bangroup[i] === str.group_id) {
+				Ignore = true;
 				break;
 			}
 		}
