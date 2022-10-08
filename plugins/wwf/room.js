@@ -189,6 +189,7 @@ class room {
 		});
 
 		for(let i = 0; i < this.killlist.length; i++) {
+			console.log(this.killlist[i]);
 			this.killlist[i].player.dead = true;
 			this.gp(ws, ["玩家 ", this.killlist[i].player.id, " 死亡"].join(''));
 			if(this.killlist[i].player.role == "witch") {//对应角色死亡的特殊处理
@@ -213,8 +214,9 @@ class room {
 			this.end(ws, this.iswin());
 		}
 	}
-	killplayer(ws, player, str) {//假死，只是加入死亡名单
-		this.killlist.push({player: player,mess: str,});
+	killplayer(ws, Player, Str) {//假死，只是加入死亡名单
+//		console.log({player: Player,mess: Str,});
+		this.killlist.push({player: Player,mess: Str,});
 	}
 	saveplayer(ws, player) {//复活假死的玩家
 		for(let i = 0; i < this.killlist.length; i++) {
@@ -242,7 +244,7 @@ class room {
 		}
 		if(this.turn == "waiting" ) {
 			this.deleteplayer(player);
-			console.log("player deleted");
+			console.log("player deleted",this.nowplayer);
 			if(this.nowplayer)this.state(ws);//等待则直接删除
 		} else if(player.dead) {
 			player.leave = true;
@@ -251,7 +253,7 @@ class room {
 				this.next(ws);
 			}
 		} else {
-			this.killplayer(player, "quit");
+			this.killplayer(ws, player, "quit");
 			player.leave = true;
 			this.gp(ws, ["玩家", player.nickname, "退出游戏"].join(''));
 			if(this.turn == "seer" && player.role == "seer") {
@@ -260,8 +262,8 @@ class room {
 			if(this.turn == "witch" && player.role == "witch") {
 				this.next(ws);
 			}
-			if(this.turn != "werewolf" && this.turn != "seer" && this.turn != "sheriff1" && this.turn != "sheriff2" && this.turn != "day") {
-				cleankilllist(ws);
+			if(this.turn != "werewolf" && this.turn != "seer" && this.turn != "witch" && this.turn != "sheriff1" && this.turn != "sheriff2" && this.turn != "day") {
+				this.cleankilllist(ws);
 			}//在白天则直接杀而且不需要处理紧急状态
 			if(!(this.turn == "end" || this.turn == "waiting") && this.iswin()) {
 				this.end(ws, this.iswin());//人离开时可能触发游戏胜利
@@ -969,21 +971,23 @@ class room {
 				for(let i = 0; i < this.playerlist.length; i++) {
 					this.playerlist[i].target = false;
 				}
-			}
-			if(!bevoter) {
+				this.next(ws);
+			} else if(!bevoter) {
 				this.gp(ws, "没有竞选者，取消警长竞选");
 				for(let i = 0; i < this.playerlist.length; i++) {
 					this.playerlist[i].target = false;
 				}
-			}//处理特殊情况
-			let mess = "警长竞选者： ";
+				this.next(ws);
+			} else {//处理特殊情况
+				let mess = "警长竞选者： ";
 
-			for(let i = 0; i < this.playerlist.length; i++) {
-				if(this.playerlist[i].target == true) {
-					mess = [mess, this.playerlist[i].nickname, " "].join('');
-				}
-			}//输出对应表单
-			this.gp(ws, mess);
+				for(let i = 0; i < this.playerlist.length; i++) {
+					if(this.playerlist[i].target == true) {
+						mess = [mess, this.playerlist[i].nickname, " "].join('');
+					}
+				}//输出对应表单
+				this.gp(ws, mess);
+			}
 			this.next(ws);
 		}
 		return "成功选择！";

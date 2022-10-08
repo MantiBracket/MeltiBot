@@ -94,7 +94,7 @@ function main(ws, str) {
 	if(str.message.split(" ")[1] === "quit") {//无论是否真实退出，在主模块均视为离开房间
 		room.quit(ws, str.user_id);
 		playerlist.delete(str.user_id);
-		if(roomid.nowplayer == 0) {//在主函数外考虑是否删除房间
+		if(room.nowplayer == 0) {//在主函数外考虑是否删除房间
 			roomlist.delete(roomid);
 		}
 		pp.main(ws, "你已成功退出房间！", str.user_id);

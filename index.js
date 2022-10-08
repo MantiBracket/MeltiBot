@@ -13,6 +13,7 @@ const connection = require('./func/connection');
 const gp = require('./func/gprint');
 const pp = require('./func/pprint');
 
+const bangroup = [];
 connection.query("show databases like 'Meltibot';", function (err, result) {//查询是否已经建库
 	if(err) {
 		console.log(err.message);
