@@ -1,3 +1,4 @@
+//引用该模块允许其他模块连上SQL
 const mysql = require("mysql");
 const connection = mysql.createConnection ({
 	host: 'localhost',

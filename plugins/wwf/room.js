@@ -1,3 +1,4 @@
+//房间类，包含绝大部分游戏代码
 const fs = require('fs');
 const path = require('path');
 const { threadId } = require('../../func/connection');
@@ -7,7 +8,7 @@ const Check = require('./check');
 const player = require('./player');
 
 class room {
-	gp(ws, str) {
+	gp(ws, str) {//群发消息
 		for(let i = 0;i < this.playerlist.length;i++) {
 			if(!(this.playerlist[i].leave)) {
 				pp.main(ws, str,this.playerlist[i].id);
@@ -123,7 +124,7 @@ class room {
 			ws.send(JSON.stringify(ret));
 		}
 	}
-	getplayer(id) {
+	getplayer(id) {//以多种方式匹配id
 		for(let i = 0;i < this.playerlist.length;i++) {
 			if(this.playerlist[i].nickname === id) {
 				return this.playerlist[i];
@@ -172,9 +173,9 @@ class room {
 	}
 	deleteplayer(player) {
 //		console.log(this.playerlist);
-		this.playerlist.splice(player.place, 1);
+		this.playerlist.splice(player.place, 1);//暴力删除
 //		console.log(this.playerlist);
-		for(let i = 0; i < this.playerlist.length; i++) {
+		for(let i = 0; i < this.playerlist.length; i++) {//传递房主
 			this.playerlist[i].place = i;
 			if(this.playerlist[i].isowner) {
 				this.ownerid = i;
@@ -182,15 +183,15 @@ class room {
 		}
 		this.nowplayer--;
 	}
-	cleankilllist(ws) {
-		this.killlist.sort(function () {
+	cleankilllist(ws) {//白天统一处理夜晚或之前累计的死亡信息
+		this.killlist.sort(function () {//随机排序，防止被看出死亡顺序
 			return Math.random() - 0.5;
 		});
 
 		for(let i = 0; i < this.killlist.length; i++) {
 			this.killlist[i].player.dead = true;
 			this.gp(ws, ["玩家 ", this.killlist[i].player.id, " 死亡"].join(''));
-			if(this.killlist[i].player.role == "witch") {
+			if(this.killlist[i].player.role == "witch") {//对应角色死亡的特殊处理
 				this.potion1 = 0;
 				this.potion2 = 0;
 			}
@@ -212,23 +213,21 @@ class room {
 			this.end(ws, this.iswin());
 		}
 	}
-	killplayer(ws, player, str) {
+	killplayer(ws, player, str) {//假死，只是加入死亡名单
 		this.killlist.push({player: player,mess: str,});
-		this.liveplayer--;
 	}
-	saveplayer(ws, player) {
+	saveplayer(ws, player) {//复活假死的玩家
 		for(let i = 0; i < this.killlist.length; i++) {
 			if(this.killlist[i].id == player.id) {
 				this.killlist.splice(i,1);
-				this.liveplayer++;
 				return;
 			}
 		}
 	}
 	quit(ws, playerid) {
-		let player = this.getplayer(playerid)
+		let player = this.getplayer(playerid);
 
-		if(player.isowner == true) {
+		if(player.isowner == true) {//传递房主
 			for(let i = 0; i < this.playerlist.length; i++) {
 				if(player.place != i && !(this.playerlist[i].leave)) {
 //					console.log(player);
@@ -244,10 +243,11 @@ class room {
 		if(this.turn == "waiting" ) {
 			this.deleteplayer(player);
 			console.log("player deleted");
-			if(this.nowplayer)this.state(ws);
+			if(this.nowplayer)this.state(ws);//等待则直接删除
 		} else if(player.dead) {
 			player.leave = true;
-			if(this.turn == "hunter" && player.role == "hunter") {
+			this.gp(ws, ["玩家", player.nickname, "退出游戏"].join(''));
+			if(this.turn == "hunter" && player.role == "hunter") {//如果在对应阶段离开则结束该阶段
 				this.next(ws);
 			}
 		} else {
@@ -262,9 +262,9 @@ class room {
 			}
 			if(this.turn != "werewolf" && this.turn != "seer" && this.turn != "sheriff1" && this.turn != "sheriff2" && this.turn != "day") {
 				cleankilllist(ws);
-			}
+			}//在白天则直接杀而且不需要处理紧急状态
 			if(!(this.turn == "end" || this.turn == "waiting") && this.iswin()) {
-				this.end(ws, this.iswin());
+				this.end(ws, this.iswin());//人离开时可能触发游戏胜利
 			}
 		}
 	}
@@ -275,7 +275,7 @@ class room {
 			return -1;
 		}
 		console.log(Number(name));
-		if(!(isNaN(Number(name)))) {
+		if(!(isNaN(Number(name)))) {//昵称不能为数值（避免昵称与编号qq号重复）且不能与他人重复
 			return -2;
 		}
 		for(let i = 0;i < this.playerlist.length;i++) {
@@ -303,7 +303,7 @@ class room {
 					god++;
 				}
 			}
-		}
+		}//查询当前局面信息并调用超级厉害的check模块！
 		return Check.check(this.huntertot, this.sheriff == 1, this.potion1, this.potion2, werewolf, god, villager, this.killall, night);
 	}
 	config(str) {
@@ -405,7 +405,7 @@ class room {
 		}
 		if(Check.check(hunter, sheriff, witch, witch, werewolf, seer + hunter + witch, villager, killall, 1)) {
 			return "游戏配置不合理！";
-		}
+		}//用超级厉害的check模块查询是否合理！
 		this.maxplayer = player;
 		this.villagertot = villager;
 		this.werewolftot = werewolf;
@@ -420,8 +420,6 @@ class room {
 		this.gp(ws, "游戏开始！");
 		this.emer = false;
 		this.givesh = false;
-		this.liveplayer = this.maxplayer;
-		this.hunterlive = this.huntertot;
 		this.potion1 = this.witchtot;
 		this.potion2 = this.witchtot;
 		this.sheriffis = 0;
@@ -446,11 +444,11 @@ class room {
 		}
 		cha.sort(function () {
 			return Math.random() - 0.5;
-		});
+		});//建立职业列表并随机
 		for(let i = 0; i < this.nowplayer; i++) {
 			this.playerlist[i].role = cha[i];
 		}
-		for(let i = 0; i < this.nowplayer; i++) {
+		for(let i = 0; i < this.nowplayer; i++) {//公布角色且狼人认队友
 			pp.main(ws, ["你的角色是： ", cha[i]].join(''), this.playerlist[i].id);
 			if(cha[i] == "werewolf") {
 				let message = "你的队友是：\n";
@@ -464,12 +462,12 @@ class room {
 			}
 			console.log([this.playerlist[i].nickname," : ",cha[i]].join(''));
 		}
-		this.turn = "lastword";
+		this.turn = "lastword";//这里是唯一一个不直接用next函数改变游戏状态的情况，因为waiting状态不能由next进入下一状态
 		this.next(ws);
 	}
-	next(ws) {
+	next(ws) {//状态转换函数，整个狼人杀插件的核心部分
 		console.log(["end turn! : ",this.turn].join(''));
-		if(this.emer == true) {
+		if(this.emer == true) {//两个特殊情况的紧急插入
 			this.turn2 = this.turn;
 			this.turn = "hunter";
 			this.gp(ws, "猎人请指定要刀的人~");
@@ -498,10 +496,10 @@ class room {
 			this.gp(ws, "回到等待房间~");
 			return;
 		}
-		if(this.turn == "waiting") {
+		if(this.turn == "waiting") {//调用end后可能还会有一部分残留的next操作，需要处理
 			return;
 		}
-		if(this.turn == "lastword") {
+		if(this.turn == "lastword") {//以下部分是正常的循环
 			this.day++;
 			this.gp(ws, "天黑请闭眼~");
 			this.turn = "werewolf";
@@ -509,7 +507,7 @@ class room {
 				if(this.playerlist[i].role == "werewolf" && !(this.playerlist[i].leave) && !(this.playerlist[i].dead)) {
 					pp.main(ws, "狼人请睁眼~\n请选择要刀的人~",this.playerlist[i].id);
 				}
-			}
+			}//狼人全离开则游戏结束，所以不需要判断是否跳过该阶段
 			return;
 		}
 		if(this.turn == "werewolf") {
@@ -528,7 +526,7 @@ class room {
 					break;
 				}
 			}
-			if(!getseer) {
+			if(!getseer) {//无对应角色存活则跳过
 				this.next(ws);
 			}
 			return;
@@ -547,7 +545,7 @@ class room {
 					getwitch = true;
 					let mess = "女巫请睁眼~\n";
 
-					if(this.potion1) {
+					if(this.potion1) {//无解药无法知道谁死了
 						mess = [mess, "晚上， "].join('');
 						if(this.killlist.length) {
 							for(let i = 0; i < this.killlist.length; i++) {
@@ -577,7 +575,7 @@ class room {
 				}
 			}
 			this.gp(ws, "天亮请睁眼~");
-			if(this.day == 1 && this.sheriff) {
+			if(this.day == 1 && this.sheriff) {//上警优于公布死亡
 				this.turn = "sheriff1";
 				this.gp(ws, "今天是第一天，请选择是否竞选警长");
 			} else {
@@ -604,7 +602,7 @@ class room {
 			} else {
 				this.gp(ws, "昨天晚上~：");
 				this.cleankilllist(ws);
-			}
+			}//清空击杀表和进入猎人阶段一定要分开，否则可能会跳过两次
 			this.next(ws);
 			return;
 		}
@@ -623,12 +621,12 @@ class room {
 			return;
 		}
 	}
-	givesheriff(ws, playerid, str) {
+	givesheriff(ws, playerid, str) {//以下一系列函数逻辑相同
 		let player = this.getplayer(playerid);
 
 		player.issheriff = false;
 		if(str == "-1") {
-			this.sheriffis = 0;
+			this.sheriffis = 0;//处理警徽位置的记录
 			this.next(ws);
 			return "你把警徽送进了坟墓";
 		} else {
@@ -784,12 +782,12 @@ class room {
 			if(target == undefined) {
 				return "投票目标不存在！";
 			}
-			if(!target.target) {
+			if(!target.target) {//target记录第二轮投票时是否第一轮投票中票数最高
 				return "不能选择其为投票目标！";
 			}
 		}
 		if(str == "-1") {
-			player.vote = -2;
+			player.vote = -2;//-2 记录弃权（其实也可以不记录）
 		} else {
 			let target = this.getplayer(str);
 
@@ -801,7 +799,7 @@ class room {
 			}
 			player.vote = target.place;
 			target.bevote += 2;
-			if(player.issheriff) {
+			if(player.issheriff) {//避免浮点误差，普通人视为2票，警长3票
 				target.bevote++;
 			}
 		}
@@ -812,7 +810,7 @@ class room {
 				finish = false;
 			}
 		}
-		if(finish == true) {
+		if(finish == true) {//全部投票
 			let maxx = 0;
 			let maxp = 0;
 			let maxu = 0;
@@ -826,7 +824,7 @@ class room {
 					maxp++;
 					maxu = i;
 				}
-			}
+			}//记录最大票数和人数和对应人
 			if(maxp == 1) {
 				this.gp(ws, [this.playerlist[maxu].nickname, "被投出去了！"].join(''));
 				this.killplayer(ws, this.playerlist[maxu], "vote");
@@ -854,10 +852,10 @@ class room {
 		}
 		return "成功选择投票目标！";
 	}
-	votesh(ws, playerid, str) {
+	votesh(ws, playerid, str) {//和上个函数逻辑相同
 		let player = this.getplayer(playerid);
 
-		if(player.target) {
+		if(player.target) {//target记录是否上警
 			return "你不能投票！";
 		}
 		if(!(player.vote == -1)) {
@@ -909,7 +907,7 @@ class room {
 					this.sheriffis = -1;
 				} else {
 					this.sheriffis = 1;
-				}
+				}//改变对应状态
 				this.vote2 = false;
 				this.next(ws);
 			} else if(this.vote2) {
@@ -977,14 +975,14 @@ class room {
 				for(let i = 0; i < this.playerlist.length; i++) {
 					this.playerlist[i].target = false;
 				}
-			}
+			}//处理特殊情况
 			let mess = "警长竞选者： ";
 
 			for(let i = 0; i < this.playerlist.length; i++) {
 				if(this.playerlist[i].target == true) {
 					mess = [mess, this.playerlist[i].nickname, " "].join('');
 				}
-			}
+			}//输出对应表单
 			this.gp(ws, mess);
 			this.next(ws);
 		}
@@ -1006,7 +1004,7 @@ class room {
 			this.gp(ws, "游戏结束！狼人胜利！");
 		}
 		this.printrole(ws);
-		for(;;) {
+		for(;;) {//清空退出者
 			let del = false;
 
 			for(let i = 0; i < this.nowplayer; i++) {
@@ -1019,11 +1017,9 @@ class room {
 			if(del == false) {
 				break;
 			}
-		}
+		}//各种参数归位
 		this.emer = false;
 		this.givesh = false;
-		this.liveplayer = 0;
-		this.hunterlive = 1;
 		this.potion1 = 1;
 		this.potion2 = 1;
 		this.sheriffis = 1;
@@ -1037,32 +1033,30 @@ class room {
 		this.next(ws);
 	}
 	constructor(roomid) {
-		this.id = roomid;
-		this.maxplayer = 8;
-		this.nowplayer = 0;
-		this.playerlist = [];
-		this.ownerid = -1;
-		this.witchtot = 0;
+		this.id = roomid;//房间id，字符串
+		this.maxplayer = 8;//最大玩家数，也是应有玩家数
+		this.nowplayer = 0;//当前玩家数
+		this.playerlist = [];//玩家列表
+		this.ownerid = -1;//房主编号
+		this.witchtot = 0;//以下各角色人数
 		this.huntertot = 1;
 		this.seertot = 1;
 		this.villagertot = 3;
 		this.werewolftot = 3;
-		this.killall = true;
-		this.sheriff = true;
+		this.killall = true;//0屠边1屠城
+		this.sheriff = true;//是否警长
 
-		this.turn = "waiting";
-		this.turn2 = "";
-		this.emer = false;
-		this.givesh = false;
-		this.vote2 = false;
-		this.liveplayer = 0;
-		this.hunterlive = 1;
-		this.potion1 = 1;
-		this.potion2 = 1;
-		this.sheriffis = 1;
-		this.day = 0;
+		this.turn = "waiting";//当前游戏状态
+		this.turn2 = "";//如果有紧急状态则把当前状态临时存到这里
+		this.emer = false;//是否猎人开枪
+		this.givesh = false;//是否警徽传递
+		this.vote2 = false;//投票是否第二阶段
+		this.potion1 = 1;//解药存在
+		this.potion2 = 1;//毒药存在
+		this.sheriffis = 1;//警长阵营（好人/无警/狼人），用于判断胜利
+		this.day = 0;//天数，用于判断是否上警
 
-		this.killlist = [];
+		this.killlist = [];//死亡名单，清空时才真正死亡
 	}
 }
 

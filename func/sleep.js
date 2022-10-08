@@ -6,7 +6,7 @@ module.exports = {
 }
 function main(delay) {
     let start = (new Date()).getTime();
-    while ((new Date()).getTime() - start < delay) {
+    while ((new Date()).getTime() - start < delay) {//通过读取当前时间来判断何时停止死循环
         continue; 
     }
-}
+}//丑了，但是至少能用

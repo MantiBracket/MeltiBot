@@ -4,6 +4,7 @@ const path = require('path');
 module.exports = {
 	check
 }
+//非常强大的判断游戏是否进入一方的必胜态的模块！
 function check(hunter, sheriff, potion1, potion2, werewolf, god, villager, killall, night) {
 	if((werewolf > god + villager) || ((werewolf == god + villager) && !sheriff)) {
 		return -1;
